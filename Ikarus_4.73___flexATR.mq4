@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------------------------------
 // Original by http://www.lifesdream.org
 //
-// Modified by MaPi & HoHe & fxtrue & FX1079
+// Modified by MaPi & HoHe & fxtrue & FX1079 & ksen & fraggli
 //
 // HIGH RISK GRID TRADING EA, USE IT ON DEMO ONLY UNTIL YOU KNOW HOW TO HANDLE AND ARE WILLING TO ACCEPT THE INVOLED RISKS!!!
 // ------------------------------------------------------------------------------------------------
@@ -21,14 +21,14 @@
 #include <stdlib.mqh>
 #include <stderror.mqh>
 
-#define versionNo "4.72"
+#define versionNo "4.73"
 #define versionBMI "Icarus " + versionNo
 #define versionOld "based on Super Money Grid v1.41"
 
 #property version versionNo
 #property strict
 
-string key = "Icarus 4.72";
+string key = "Icarus 4.73";
 string key_hedging = "Reverse";
 enum BB_options {ASK_BID, HIGH_LOW};
 enum weekdays {SUN, MON, TUE, WED, THU, FRI, SAT};
@@ -43,7 +43,7 @@ int user_slippage = 2;
 
 extern double grid_size       = 20;       // Grid_Size
 extern int gs_progression     = 3;        // GS_Progression
-extern double gs_multiplicator  =3;             // martingale coefficient for grid step
+extern double gs_multiplicator  =3;       // Martingale coefficient for grid step
 extern double take_profit     = 20;       // Take_Profit
 extern double profit_lock     = 0.80;     // Profit_Lock
 extern double min_lots        = 0.01;     // Min_lots
@@ -52,7 +52,7 @@ extern double account_risk    = 1.00;     // Account_Risk
 extern bool useTradeCycleRisk = false;    // Use Buy OR Sell Cycle Risk
 extern double cycleEquityRisk = 0.10;     // Buy OR Sell Cycle Equity Risk Percentage
 extern int progression        = 3;        // Progression
-extern double lot_multiplicator =1.0;            // martingale coefficient for lot
+extern double lot_multiplicator =1.0;     // Martingale coefficient for lot
 extern int max_positions      = 6;        // Max_Position
 extern int max_spread         = 100;      // Max_Spread
 extern int show_forecast      = 1;        // Show_Forecast
@@ -74,8 +74,8 @@ extern int StopSec  = 0;            // Second_End
 sinput string Indicators_Settings;        //*****    Settings of indicators   *****
 extern bool Conjunct_Idx = true;         //All selected indicators will be applied together
 
-sinput string Bolinger_Band;
-extern bool Use_BB       = true;          // Bolinger Band is used
+sinput string Bollinger_Bands; //*****   Bollinger Bands   *****
+extern bool Use_BB       = true;          // Bollinger Bands is used
 extern bool BB_invert    = false;         // Invert Trigger
 extern ENUM_TIMEFRAMES BB_tf = PERIOD_M1; // Time Frame
 extern int BB_Period     = 20;            // Period
@@ -83,7 +83,7 @@ extern double BB_Dev     = 3.0;           // Deviation
 extern int BB_Shift      = 0;             // Shift
 extern BB_options BB_Mod = ASK_BID;       // Option
 
-sinput string Stochastic_Oscullator; //*****     Stochastic Oscullator    *****
+sinput string Stochastic_Oscullator; //*****   Stochastic Oscullator   *****
 extern bool Use_Stoch    = true; //Stochastic Oscullator is used
 extern bool STO_invert   = false; //Invert Trigger
 extern ENUM_TIMEFRAMES Stoch_tf = PERIOD_M1; //Time Frame
@@ -105,7 +105,16 @@ extern double RSI_Lower  = 30;  //Lower level
 extern double RSI_Upper  = 70;  //Upper level
 extern int RSI_Shift     = 0;   //Shift
 
-sinput string ATR_for_Grid_Size; //*****     Average True Range      *****
+sinput string Commodity_Channel_Index; //*****   Commodity Channel Index   *****
+extern bool Use_CCI      = true;   //CCI is used
+extern bool CCI_invert   = false;  //Invert Trigger
+extern ENUM_TIMEFRAMES CCI_tf = PERIOD_M15; //Time Frame
+extern int CCI_Period    = 25;  //Period
+extern double CCI_Lower  = -100;  //Lower level
+extern double CCI_Upper  = 100;  //Upper level
+extern int CCI_Shift     = 0;   //Shift
+
+sinput string ATR_for_Grid_Size; //*****   Average True Range   *****
 extern bool Use_ATR           = false;      //Using ATR for Grid Size
 extern ENUM_TIMEFRAMES ATR_tf = PERIOD_H1;  //Time Frame
 extern int ATR_Period         = 5;          //Period
@@ -113,25 +122,25 @@ extern int ATR_shift          = 0;          //Shift;
 extern double ATR_Multiplier  = 3.0;        //ATR Multiplier
 extern double TP_Multiplier   = 1.0;        //TP Multiplier (Ratio of ATR)
 
-sinput string         delimeter_02 = "--------------------Ур._Равного_Лока---------------------------";
-extern bool       _uUr_RL              = true;        //вывод линии уровня на экран
-extern color      Color_RL             = clrDodgerBlue;  //цвет линии уровня равного лока
-extern int        Style_RL             = 2;           //тип линии уровня равного лока (0,1,2,3,4)
-extern int        Width_RL             = 1;           //толщина линии уровня равного лока (0,1,2,3,4)
-sinput string        delimeter_03 = "---------------------Ур.Общ._Безубытка--------------------------";
-extern bool       _uUrOZP              = true;        //вывод метки уровня на экран
-extern color      Color_OZP            = clrDeepSkyBlue; //цвет метки  уровня общего безубытка
-sinput string        delimeter_04 = "---------------------Ур._Безубытков-----------------------------";
-extern bool       _uUrZP               = true;        //вывод метки уровня на экран
-extern color      Color_ZP_Buy             = clrBlue; //цвет метки уровня безубытка Buy
-extern color      Color_ZP_Sell            = clrRed; //цвет метки уровня безубытка Sell
-
+sinput string         delimeter_02; //*****   Equal Lock Level   *****
+extern bool       _uUr_RL              = true;        //Display Level Line
+extern color      Color_RL             = clrDodgerBlue;  //Level Line Color
+extern int        Style_RL             = 2;           //Level Line Type (0,1,2,3,4)
+extern int        Width_RL             = 1;           //Level Line Tickness (0,1,2,3,4)
+sinput string        delimeter_03; ////*****   Total Breakeven Level   *****
+extern bool       _uUrOZP              = true;        //Display Breakeven Line
+extern color      Color_OZP            = clrDeepSkyBlue; //Breakeven Line Color
+sinput string        delimeter_04; //*****   Breakeven Level (separately)   *****
+extern bool       _uUrZP               = true;        //Display seperate Breakeven Line 
+extern color      Color_ZP_Buy             = clrBlue; //Buy Breakeven Line Color
+extern color      Color_ZP_Sell            = clrRed; //Sell Breakeven Line Color
 
 // ------------------------------------------------------------------------------------------------
 // GLOBAL VARS
 // ------------------------------------------------------------------------------------------------
 // Ticket
 // #007: be able to deal with variable number of open positions
+
 bool buy_chased = false, sell_chased = false;
 int buy_tickets[max_open_positions];
 int sell_tickets[max_open_positions];
@@ -159,7 +168,7 @@ double hedge_buy_price[max_open_positions];
 double hedge_sell_price[max_open_positions];
 
 // Hedging indicators
-int hedge_magic = 11236;
+int hedge_magic = magic + 1;
 bool is_sell_hedging_active = false, is_buy_hedging_active = false;
 bool is_sell_hedging_order_active = false, is_buy_hedging_order_active = false;
 
@@ -364,9 +373,9 @@ void OnTick()
    UpdateVars();
    SortByLots();
    showData();
-// Вычисление  безубытков
+// Breakeven Calculation
    BreakEven();
-// Вычисление  линии равного лока
+// Equal Lock Line Calculation
    EqualLockLevel();
 //***************************************************************
 // #014: start new dynamic debug output here; will be shown at the end of comment string; will be updated each program loop
@@ -450,7 +459,7 @@ void OnDeinit(const int reason)
    DeleteButton("btnCloseLastSell");
    DeleteButton("btnCloseAllBuys");
    DeleteButton("btnCloseAllSells");
-   //---
+//---
    if(ObjectFind("BE_buy") != -1)
       ObjectDelete("BE_buy");
    if(ObjectFind("BE_sell") != -1)
@@ -549,7 +558,7 @@ void robot()
 // **************************************************
    if(buys == 1)
      {
-           if(Use_ATR)
+      if(Use_ATR)
         {
          grid_size = ATR_Grid_Size();
          take_profit = TP_Multiplier * ATR_Grid_Size() / ATR_Multiplier; // maybe fixed take profit better?
@@ -595,7 +604,7 @@ void robot()
 // **************************************************
    if(buys > 1)
      {
-           if(Use_ATR)
+      if(Use_ATR)
         {
          grid_size = ATR_Grid_Size();
          take_profit = TP_Multiplier * ATR_Grid_Size() / ATR_Multiplier; // maybe fixed take profit better?
@@ -728,7 +737,7 @@ void robot()
 // **************************************************
    if(sells == 1)
      {
-           if(Use_ATR)
+      if(Use_ATR)
         {
          grid_size = ATR_Grid_Size();
          take_profit = TP_Multiplier * ATR_Grid_Size() / ATR_Multiplier; // maybe fixed take profit better?
@@ -774,7 +783,7 @@ void robot()
 // **************************************************
    if(sells > 1)
      {
-           if(Use_ATR)
+      if(Use_ATR)
         {
          grid_size = ATR_Grid_Size();
          take_profit = TP_Multiplier * ATR_Grid_Size() / ATR_Multiplier; // maybe fixed take profit better?
@@ -1009,11 +1018,11 @@ double CalculateNextVolume(int orderType)
       case 2:
          if(orderType == OP_BUY)
            {
-            return (NormalizeDouble (min_lots * MathPow (lot_multiplicator, buys),2));          //(lot_multiplicator * buy_lots[buys - 1]);
+            return (NormalizeDouble(min_lots * MathPow(lot_multiplicator, buys),2));            //(lot_multiplicator * buy_lots[buys - 1]);
            }
          else
            {
-            return (NormalizeDouble (min_lots * MathPow (lot_multiplicator, sells),2));         //(lot_multiplicator * sell_lots[sells - 1]);
+            return (NormalizeDouble(min_lots * MathPow(lot_multiplicator, sells),2));           //(lot_multiplicator * sell_lots[sells - 1]);
            }
          break;
       case 3:
@@ -1333,8 +1342,8 @@ void NewGridOrder(int orderType, bool ishedgely)
       if(progression == 1)
          next_lot = buy_lots[buys - 1] + buy_lots[0];
       if(progression == 2)
-         next_lot = (NormalizeDouble (min_lots * MathPow (lot_multiplicator, buys),2));
-         //lot_multiplicator * buy_lots[buys - 1];
+         next_lot = (NormalizeDouble(min_lots * MathPow(lot_multiplicator, buys),2));
+      //lot_multiplicator * buy_lots[buys - 1];
       if(progression == 3)
          next_lot = CalculateFibonacci(buys + 1) * min_lots;
 
@@ -1348,8 +1357,8 @@ void NewGridOrder(int orderType, bool ishedgely)
       if(progression == 1)
          next_lot = sell_lots[sells - 1] + sell_lots[0];
       if(progression == 2)
-         next_lot = (NormalizeDouble (min_lots * MathPow (lot_multiplicator, sells),2));
-         //lot_multiplicator * sell_lots[sells - 1];
+         next_lot = (NormalizeDouble(min_lots * MathPow(lot_multiplicator, sells),2));
+      //lot_multiplicator * sell_lots[sells - 1];
       if(progression == 3)
          next_lot = CalculateFibonacci(sells + 1) * min_lots;
 
@@ -1774,6 +1783,46 @@ bool RSI_Sell()
       return(false);
      }
   }
+
+//+------------------------------------------------------------------+
+//  RSI trigger
+//+------------------------------------------------------------------+
+bool CCI_Buy()
+  {
+   double CCI_Value = iCCI(Symbol(), CCI_tf, CCI_Period, PRICE_CLOSE, CCI_Shift);
+   if(!CCI_invert)
+     {
+      if(CCI_Value < CCI_Lower)
+         return(true);
+      return(false);
+     }
+   else
+     {
+      if(CCI_Value > CCI_Lower && CCI_Value < CCI_Upper)
+         return(true);
+      return(false);
+     }
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool CCI_Sell()
+  {
+   double CCI_Value = iCCI(Symbol(), CCI_tf, CCI_Period, PRICE_CLOSE, CCI_Shift);
+   if(!CCI_invert)
+     {
+      if(CCI_Value > CCI_Upper)
+         return(true);
+      return(false);
+     }
+   else
+     {
+      if(CCI_Value > CCI_Lower && CCI_Value < CCI_Upper)
+         return(true);
+      return(false);
+     }
+  }
+
 //+------------------------------------------------------------------+
 //  ATR Grid Size
 //+------------------------------------------------------------------+
@@ -2185,50 +2234,50 @@ void showData()
       double pips2go_Buys = MathAbs(line_buy / ter_tick_size - ter_priceSell / ter_tick_size) / 10;
       double pips2go_Sells = MathAbs(line_sell / ter_tick_size - ter_priceBuy / ter_tick_size) / 10;
       Write("panel_1_11", "Pips2Go B " + DoubleToString(pips2go_Buys, 0) + " S " + DoubleToStr(pips2go_Sells, 0), 5, 192, "Arial", 10, panelCol);
-     
-   //---------------------if(showComment)
-      
-      Write("panel_1_14", "BUY ORDERS"  , 5, 300, "Arial", 10, panelCol);
-      Write("panel_1_15", "Number of orders: " + (string)buys , 5, 316, "Arial", 10, panelCol);
-      Write("panel_1_16", "Total lots: " + DoubleToStr(total_buy_lots, 2) , 5, 332, "Arial", 10, panelCol);
-      Write("panel_1_17", "Profit goal: " + ter_currencySymbol + DoubleToStr(aux_tp_buy, 2) , 5, 348, "Arial", 10, panelCol);
-      Write("panel_1_18", "Maximum profit reached: " + ter_currencySymbol + DoubleToStr(buy_max_profit, 2) , 5, 364, "Arial", 10, panelCol);
-      Write("panel_1_19", "Profit locked: " + ter_currencySymbol + DoubleToStr(buy_close_profit, 2) , 5, 380, "Arial", 10, panelCol);
-      Write("panel_1_20", "SellHedging: " + ter_currencySymbol + DoubleToStr(total_hedge_sell_profit, 2) , 5, 396, "Arial", 10, panelCol);
-      Write("panel_1_21", "SellHedging_Orders: " + (string)hedge_sells , 5, 412, "Arial", 10, panelCol);
-      Write("panel_1_22", "SellHedging_Lots: " + DoubleToStr(total_hedge_sell_lots, 2) , 5, 428, "Arial", 10, panelCol);
-      
-      Write("panel_1_23", "SELL ORDERS" , 5, 460, "Arial", 10, panelCol);
-      Write("panel_1_24", "Number of orders: " + (string)sells , 5, 476, "Arial", 10, panelCol);
-      Write("panel_1_25", "Total lots: " + DoubleToStr(total_sell_lots, 2) , 5, 492, "Arial", 10, panelCol);
-      Write("panel_1_26", "Profit goal: " + ter_currencySymbol + DoubleToStr(aux_tp_sell, 2) , 5, 508, "Arial", 10, panelCol);
-      Write("panel_1_27", "Maximum profit reached: " + ter_currencySymbol + DoubleToStr(sell_max_profit, 2) , 5, 524, "Arial", 10, panelCol);
-      Write("panel_1_28", "Profit locked: " + ter_currencySymbol + DoubleToStr(sell_close_profit, 2) , 5, 540, "Arial", 10, panelCol);
-      Write("panel_1_29", "BuyHedging: " + ter_currencySymbol + DoubleToStr(total_hedge_buy_profit, 2) , 5, 556, "Arial", 10, panelCol);
-      Write("panel_1_30", "BuyHedging_Orders: " + (string)hedge_buys , 5, 572, "Arial", 10, panelCol);
-      Write("panel_1_31", "BuyHedging_Lots: " + DoubleToStr(total_hedge_buy_lots, 2) , 5, 588, "Arial", 10, panelCol);
-      
-      
-      
 
-      Write("panel_1_32", "Current drawdown: " + DoubleToString((max_equity - AccountEquity()), 2) + " " + ter_currencySymbol + " (" + DoubleToString((max_equity - AccountEquity()) / max_equity * 100, 2) + " %)" , 5, 620, "Arial", 10, panelCol);
-      Write("panel_1_33", "Max. drawdown: " + DoubleToString(max_float, 2) + " " + ter_currencySymbol , 5, 636, "Arial", 10, panelCol);
+      //---------------------if(showComment)
 
-      Write("panel_1_34", "SETTINGS: " , 5, 668, "Arial", 10, panelCol);
-      Write("panel_1_35", "Grid size: " + (string)grid_size , 5, 684, "Arial", 10, panelCol);
-      Write("panel_1_36", info_gs_progression , 5, 700, "Arial", 10, panelCol);
-      Write("panel_1_37", "Take profit: " + (string)take_profit , 5, 716, "Arial", 10, panelCol);
+      Write("panel_1_14", "BUY ORDERS", 5, 300, "Arial", 10, panelCol);
+      Write("panel_1_15", "Number of orders: " + (string)buys, 5, 316, "Arial", 10, panelCol);
+      Write("panel_1_16", "Total lots: " + DoubleToStr(total_buy_lots, 2), 5, 332, "Arial", 10, panelCol);
+      Write("panel_1_17", "Profit goal: " + ter_currencySymbol + DoubleToStr(aux_tp_buy, 2), 5, 348, "Arial", 10, panelCol);
+      Write("panel_1_18", "Maximum profit reached: " + ter_currencySymbol + DoubleToStr(buy_max_profit, 2), 5, 364, "Arial", 10, panelCol);
+      Write("panel_1_19", "Profit locked: " + ter_currencySymbol + DoubleToStr(buy_close_profit, 2), 5, 380, "Arial", 10, panelCol);
+      Write("panel_1_20", "SellHedging: " + ter_currencySymbol + DoubleToStr(total_hedge_sell_profit, 2), 5, 396, "Arial", 10, panelCol);
+      Write("panel_1_21", "SellHedging_Orders: " + (string)hedge_sells, 5, 412, "Arial", 10, panelCol);
+      Write("panel_1_22", "SellHedging_Lots: " + DoubleToStr(total_hedge_sell_lots, 2), 5, 428, "Arial", 10, panelCol);
+
+      Write("panel_1_23", "SELL ORDERS", 5, 460, "Arial", 10, panelCol);
+      Write("panel_1_24", "Number of orders: " + (string)sells, 5, 476, "Arial", 10, panelCol);
+      Write("panel_1_25", "Total lots: " + DoubleToStr(total_sell_lots, 2), 5, 492, "Arial", 10, panelCol);
+      Write("panel_1_26", "Profit goal: " + ter_currencySymbol + DoubleToStr(aux_tp_sell, 2), 5, 508, "Arial", 10, panelCol);
+      Write("panel_1_27", "Maximum profit reached: " + ter_currencySymbol + DoubleToStr(sell_max_profit, 2), 5, 524, "Arial", 10, panelCol);
+      Write("panel_1_28", "Profit locked: " + ter_currencySymbol + DoubleToStr(sell_close_profit, 2), 5, 540, "Arial", 10, panelCol);
+      Write("panel_1_29", "BuyHedging: " + ter_currencySymbol + DoubleToStr(total_hedge_buy_profit, 2), 5, 556, "Arial", 10, panelCol);
+      Write("panel_1_30", "BuyHedging_Orders: " + (string)hedge_buys, 5, 572, "Arial", 10, panelCol);
+      Write("panel_1_31", "BuyHedging_Lots: " + DoubleToStr(total_hedge_buy_lots, 2), 5, 588, "Arial", 10, panelCol);
+
+
+
+
+      Write("panel_1_32", "Current drawdown: " + DoubleToString((max_equity - AccountEquity()), 2) + " " + ter_currencySymbol + " (" + DoubleToString((max_equity - AccountEquity()) / max_equity * 100, 2) + " %)", 5, 620, "Arial", 10, panelCol);
+      Write("panel_1_33", "Max. drawdown: " + DoubleToString(max_float, 2) + " " + ter_currencySymbol, 5, 636, "Arial", 10, panelCol);
+
+      Write("panel_1_34", "SETTINGS: ", 5, 668, "Arial", 10, panelCol);
+      Write("panel_1_35", "Grid size: " + (string)grid_size, 5, 684, "Arial", 10, panelCol);
+      Write("panel_1_36", info_gs_progression, 5, 700, "Arial", 10, panelCol);
+      Write("panel_1_37", "Take profit: " + (string)take_profit, 5, 716, "Arial", 10, panelCol);
       Write("panel_1_38", "Profit locked: " + DoubleToStr(100 * profit_lock, 2) + "%", 5, 732, "Arial", 10, panelCol);
-      Write("panel_1_39", "Minimum lots: " + DoubleToStr(min_lots, 2) , 5, 748, "Arial", 10, panelCol);
-      Write("panel_1_40", "Equity warning: " + DoubleToStr(100 * equity_warning, 2) + "%"  , 5, 764, "Arial", 10, panelCol);
+      Write("panel_1_39", "Minimum lots: " + DoubleToStr(min_lots, 2), 5, 748, "Arial", 10, panelCol);
+      Write("panel_1_40", "Equity warning: " + DoubleToStr(100 * equity_warning, 2) + "%", 5, 764, "Arial", 10, panelCol);
       Write("panel_1_41", "Account risk: " + DoubleToStr(100 * account_risk, 2) + "%", 5, 780, "Arial", 10, panelCol);
       Write("panel_1_42", cycleRisttext, 5, 796, "Arial", 10, panelCol);
       Write("panel_1_43", "Progression: " + info_money_management[progression] + (string)lot_multiplicator, 5, 812, "Arial", 10, panelCol);
       Write("panel_1_44", "Max Positions: " + (string)max_positions, 5, 828, "Arial", 10, panelCol);
       Write("panel_1_45", "AveregeFrom: " + (string)grid_partially_close, 5, 844, "Arial", 10, panelCol);
-     
-     
-     
+
+
+
      }
   }
 
@@ -2407,7 +2456,7 @@ void UpdateVars()
    total_sell_swap         = aux_total_sell_swap;
    total_hedge_buy_swap   = aux_hedge_total_buy_swap;
    total_hedge_sell_swap  = aux_hedge_total_sell_swap;
-   
+
    dLots = (buys + hedge_buys) - (sells + hedge_sells);     // разность объема ордеров
    dlots = NormalizeDouble(dLots, Digits);                   //убираем погрешность в расчете разности объема ордеров
 
@@ -4219,11 +4268,14 @@ void driveline(string Text, double Znach, color Color, int Style, int Width)
    ObjectSet(Text, OBJPROP_STYLE, Style);
    ObjectSet(Text, OBJPROP_WIDTH, Width);
   }
- //---------------------------------------------------------------------------------------------//
+//---------------------------------------------------------------------------------------------//
 //+------------------------------------------------------------------+
 //|                        NewBarTF                                  |
 //+------------------------------------------------------------------+
 
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 bool NewBarTF(int period)
   {
    static datetime old_time=NULL;
@@ -4237,3 +4289,4 @@ bool NewBarTF(int period)
 
    return false;
   }
+//+------------------------------------------------------------------+
