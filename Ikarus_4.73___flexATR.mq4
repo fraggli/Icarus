@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------------------------------
 // Original by http://www.lifesdream.org
 //
-// Modified by MaPi & HoHe & fxtrue & FX1079 & ksen & fraggli
+// Modified by MaPi,HoHe,fxtrue,FX1079,xxl205,ksen,fraggli
 //
 // HIGH RISK GRID TRADING EA, USE IT ON DEMO ONLY UNTIL YOU KNOW HOW TO HANDLE AND ARE WILLING TO ACCEPT THE INVOLED RISKS!!!
 // ------------------------------------------------------------------------------------------------
@@ -118,7 +118,7 @@ sinput string ATR_for_Grid_Size; //*****   Average True Range   *****
 extern bool Use_ATR           = false;      //Using ATR for Grid Size
 extern ENUM_TIMEFRAMES ATR_tf = PERIOD_H1;  //Time Frame
 extern int ATR_Period         = 5;          //Period
-extern int ATR_shift          = 0;          //Shift;
+extern int ATR_shift          = 0;          //Shift
 extern double ATR_Multiplier  = 3.0;        //ATR Multiplier
 extern double TP_Multiplier   = 1.0;        //TP Multiplier (Ratio of ATR)
 
@@ -193,8 +193,8 @@ double relativeVolume = 0;
 double buy_close_profit_trail_orders = 0, sell_close_profit_trail_orders = 0;
 bool buy_max_order_lot_open = false, sell_max_order_lot_open = false;
 
-double dLots = 0; // разность объемов ордеров Buy и Sell
-double dlots = 0; //убираем погрешность в расчете разности объема ордеров
+double dLots = 0; // Difference between Buy and Sell order volumes
+double dlots = 0; // Remove the error in the calculation of the difference in the volume of orders
 
 // Colors:
 //color c=Black;
@@ -284,16 +284,16 @@ double ter_MODE_MARGININIT = MarketInfo(Symbol(), MODE_MARGININIT);
 double ter_MODE_MARGINMAINTENANCE = MarketInfo(Symbol(), MODE_MARGINMAINTENANCE);
 double ter_MODE_MARGINREQUIRED = MarketInfo(Symbol(), MODE_MARGINREQUIRED);
 
-double freemargin = AccountFreeMargin();                               //имеющиеся на счету свободных средств
+double freemargin = AccountFreeMargin();                               //Free funds available in the account
 
 //+------------------------------------------------------------------+
-// уровни безубытка
+// Breakeven levels
 double Ur_total_BE = 0;
 double Ur_BE_buy = 0;
 double Ur_BE_sell = 0;
 
 //+------------------------------------------------------------------+
-//для вывода Comment в SHOW DATA
+//To display Comment in SHOW DATA
 double ATR_Buy = 0;
 double ATR_Sell = 0;
 
@@ -1785,7 +1785,7 @@ bool RSI_Sell()
   }
 
 //+------------------------------------------------------------------+
-//  RSI trigger
+//  CCI trigger
 //+------------------------------------------------------------------+
 bool CCI_Buy()
   {
@@ -1848,19 +1848,22 @@ double ATR_Grid_Size()
 //+------------------------------------------------------------------+
 bool Indicators_Buy()
   {
-   bool BB_ret, STO_ret, RSI_ret;
+   bool BB_ret, STO_ret, RSI_ret, CCI_ret;
    if(Conjunct_Idx)
      {
       BB_ret = true;
       STO_ret = true;
       RSI_ret = true;
+      CCI_ret = true;
       if(Use_BB)
          BB_ret = BB_Buy();
       if(Use_Stoch)
          STO_ret = STO_Buy();
       if(Use_RSI)
          RSI_ret = RSI_Buy();
-      if(BB_ret && STO_ret && RSI_ret)
+      if(Use_CCI)
+         CCI_ret = CCI_Buy();   
+      if(BB_ret && STO_ret && RSI_ret && CCI_ret)
          return (true);
       return(false);
      }
@@ -1878,7 +1881,11 @@ bool Indicators_Buy()
          RSI_ret = RSI_Buy();
       else
          RSI_ret = false;
-      if(BB_ret || STO_ret || RSI_ret)
+      if(Use_CCI)
+         CCI_ret = CCI_Buy();
+      else
+         CCI_ret = false;
+      if(BB_ret || STO_ret || RSI_ret || CCI_ret)
          return (true);
       return(false);
      }
@@ -1890,19 +1897,22 @@ bool Indicators_Buy()
 //+------------------------------------------------------------------+
 bool Indicators_Sell()
   {
-   bool BB_ret, STO_ret, RSI_ret;
+   bool BB_ret, STO_ret, RSI_ret, CCI_ret;
    if(Conjunct_Idx)
      {
       BB_ret = true;
       STO_ret = true;
       RSI_ret = true;
+      CCI_ret = true;
       if(Use_BB)
          BB_ret = BB_Sell();
       if(Use_Stoch)
          STO_ret = STO_Sell();
       if(Use_RSI)
          RSI_ret = RSI_Sell();
-      if(BB_ret && STO_ret && RSI_ret)
+      if(Use_CCI)
+         CCI_ret = CCI_Sell();
+      if(BB_ret && STO_ret && RSI_ret & CCI_ret)
          return (true);
       return(false);
      }
@@ -1920,7 +1930,11 @@ bool Indicators_Sell()
          RSI_ret = RSI_Sell();
       else
          RSI_ret = false;
-      if(BB_ret || STO_ret || RSI_ret)
+      if(Use_CCI)
+         CCI_ret = CCI_Sell();
+      else
+         CCI_ret = false;
+      if(BB_ret || STO_ret || RSI_ret || CCI_ret)
          return (true);
       return(false);
      }
@@ -2457,9 +2471,8 @@ void UpdateVars()
    total_hedge_buy_swap   = aux_hedge_total_buy_swap;
    total_hedge_sell_swap  = aux_hedge_total_sell_swap;
 
-   dLots = (buys + hedge_buys) - (sells + hedge_sells);     // разность объема ордеров
-   dlots = NormalizeDouble(dLots, Digits);                   //убираем погрешность в расчете разности объема ордеров
-
+   dLots = (buys + hedge_buys) - (sells + hedge_sells);     // Order volume difference
+   dlots = NormalizeDouble(dLots, Digits);                   // Remove the error in the calculation of the difference in the volume of orders
 
    relativeVolume = MathAbs(total_buy_lots - total_sell_lots);
   }
@@ -4132,8 +4145,8 @@ void BreakEven()
 
 
 
-// Если это первый запуск эксперта, мы не знаем количество ордеров на предыдущем тике.
-// Поэтому просто запоминаем его, делаем пометку, что первый запуск уже был, и выходим.
+// If this is the first launch of the Expert Advisor, we do not know the number of orders on the previous tick.
+// Therefore, we simply remember it, make a note that the first launch has already taken place, and exit.
    if(first)
      {
       pre_OrdersTotal = _OrdersTotal;
@@ -4141,30 +4154,30 @@ void BreakEven()
       return;
      }
 
-// Сравниваем количество позиций на предыдущем тике с текущим количеством
-// Если оно изменилось, считаем уровни
+// Compare the number of positions on the previous tick with the current number
+// If it has changed, count the levels
    if(_OrdersTotal > pre_OrdersTotal ||  _OrdersTotal < pre_OrdersTotal)
 
-      // Запоминаем количество позиций
+      // Remember the number of positions
       pre_OrdersTotal = _OrdersTotal;
 
-// Расчеты уровней безубытков (расчитано в Updeit Vars)_?????????????????????????
-   dLots = (local_total_buy_lots) - (local_total_sell_lots); // разность объемов ордеров BUY и SELL
-   dlots = NormalizeDouble(dLots, Digits);           //убираем погрешность в расчете разности объема ордеров
+// Break-even level calculations (calculated in Update Vars)
+   dLots = (local_total_buy_lots) - (local_total_sell_lots); // Difference between the volumes of BUY and SELL orders
+   dlots = NormalizeDouble(dLots, Digits);           // Remove the error in the calculation of the difference in the volume of orders
    double aux_Ur_total_BE = 0, aux_Ur_BE_buy = 0, aux_Ur_BE_sell = 0;
 
    if(dlots != 0)
      {
       if(dlots > 0)
-         aux_Ur_total_BE = Bid - ((local_total_buy_profit + local_total_sell_profit) / (ter_tick_value * (dlots)) * Point);   //уровень общего безубытка для ВСЕХ открытых ордеров
+         aux_Ur_total_BE = Bid - ((local_total_buy_profit + local_total_sell_profit) / (ter_tick_value * (dlots)) * Point);   // Total breakeven level for ALL open orders
       if(dlots < 0)
-         aux_Ur_total_BE = Ask - ((local_total_buy_profit + local_total_sell_profit) / (ter_tick_value * (dlots)) * Point);   //уровень общего безубытка для ВСЕХ открытых ордеров
+         aux_Ur_total_BE = Ask - ((local_total_buy_profit + local_total_sell_profit) / (ter_tick_value * (dlots)) * Point);   // Total breakeven level for ALL open orders
      }
 
    if(total_buy_lots > 0)
-      aux_Ur_BE_buy = Bid - (local_total_buy_profit / (ter_tick_value * local_total_buy_lots) * Point);     //уровень безубытка для BUY ордеров
+      aux_Ur_BE_buy = Bid - (local_total_buy_profit / (ter_tick_value * local_total_buy_lots) * Point);     // Breakeven level for BUY orders
    if(total_sell_lots > 0)
-      aux_Ur_BE_sell = Ask + (local_total_sell_profit / (ter_tick_value * local_total_sell_lots) * Point);   //уровень безубытка для SELL ордеров
+      aux_Ur_BE_sell = Ask + (local_total_sell_profit / (ter_tick_value * local_total_sell_lots) * Point);   // Breakeven level for SELL orders
 
    if(local_total_buy_lots != 0 && local_total_sell_lots == 0)
       aux_Ur_total_BE = aux_Ur_BE_buy;
@@ -4176,7 +4189,7 @@ void BreakEven()
    Ur_BE_sell = aux_Ur_BE_sell;
 
 //+------------------------------------------------------------------+
-//рисование меток безубытков
+// Drawing breakeven labels
 
 
    datetime time;
@@ -4224,12 +4237,13 @@ void BreakEven()
   }
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
-//|                    РАСЧЕТ уровня равного лока                     |
+//|                    CALCULATION of equal lock level               |
 //+------------------------------------------------------------------+
 void EqualLockLevel()
   {
 
-//расчеты уровней:
+//---------------------------------------------------------------------------------------------//
+// Level calculations
 //---------------------------------------------------------------------------------------------//
    double UrRL = 0, dUrRL = 0;
 
@@ -4246,7 +4260,7 @@ void EqualLockLevel()
      }
 
 //---------------------------------------------------------------------------------------------//
-//рисование уровней:
+// Level drawing
 //---------------------------------------------------------------------------------------------//
 
    if(dlots != 0 && _uUr_RL)
@@ -4257,8 +4271,7 @@ void EqualLockLevel()
 
   }
 //---------------------------------------------------------------------------------------------//
-//444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444//
-//функция отрисовки линий - уровней:
+// Function for drawing lines - levels
 //---------------------------------------------------------------------------------------------//
 void driveline(string Text, double Znach, color Color, int Style, int Width)
   {
@@ -4271,10 +4284,6 @@ void driveline(string Text, double Znach, color Color, int Style, int Width)
 //---------------------------------------------------------------------------------------------//
 //+------------------------------------------------------------------+
 //|                        NewBarTF                                  |
-//+------------------------------------------------------------------+
-
-//+------------------------------------------------------------------+
-//|                                                                  |
 //+------------------------------------------------------------------+
 bool NewBarTF(int period)
   {
