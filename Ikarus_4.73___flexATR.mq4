@@ -1912,7 +1912,7 @@ bool Indicators_Sell()
          RSI_ret = RSI_Sell();
       if(Use_CCI)
          CCI_ret = CCI_Sell();
-      if(BB_ret && STO_ret && RSI_ret & CCI_ret)
+      if(BB_ret && STO_ret && RSI_ret && CCI_ret)
          return (true);
       return(false);
      }
