@@ -1,4 +1,12 @@
-# Icarus
+## Icarus
+
+Version changes made to the original version in the main branch:
+1) Code cleanup
+2) Translated some strings into english
+3) Added CCI entry
+4) Added Trend Filter
+
+***
 
 For storing different versions
 
@@ -7,7 +15,6 @@ https://www.forexfactory.com/thread/post/14016738#post14016738
 
 **All credits:**<br>
 Original by:
-
 www.lifesdream.org
 
 Modified by:<br>
