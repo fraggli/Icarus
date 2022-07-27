@@ -3,7 +3,7 @@
 //
 // Modified by MaPi,HoHe,fxtrue,FX1079,xxl205,ksen,fraggli
 //
-// HIGH RISK GRID TRADING EA, USE IT ON DEMO ONLY UNTIL YOU KNOW HOW TO HANDLE AND ARE WILLING TO ACCEPT THE INVOLED RISKS!!!
+// HIGH RISK GRID TRADING EA, USE IT ON DEMO ONLY UNTIL YOU KNOW HOW TO HANDLE AND ARE WILLING TO ACCEPT THE INVOLVED RISKS!!!
 // ------------------------------------------------------------------------------------------------
 //
 // To change global vars (F3):
@@ -26,6 +26,13 @@
 #define versionOld "based on Super Money Grid v1.41"
 
 #property version versionNo
+
+#property description "Based on Super Money Grid v1.41"
+#property description "Original by http://www.lifesdream.org"
+#property description "Modified by MaPi,HoHe,fxtrue,FX1079,xxl205,ksen,fraggli"
+#property description " "
+#property description "CCI entry and EMA TrendFilter added"
+
 #property strict
 
 string key = "Icarus 4.73";
