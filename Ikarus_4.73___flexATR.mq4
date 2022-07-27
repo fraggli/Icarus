@@ -33,6 +33,8 @@ string key_hedging = "Reverse";
 enum BB_options {ASK_BID, HIGH_LOW};
 enum weekdays {SUN, MON, TUE, WED, THU, FRI, SAT};
 
+enum ENUM_TRENDFILTER_METHOD {EMA_Slope,Close_And_EMA_200 };
+
 // ------------------------------------------------------------------------------------------------
 // EXTERN VARS
 // ------------------------------------------------------------------------------------------------
@@ -113,6 +115,19 @@ extern int CCI_Period    = 25;  //Period
 extern double CCI_Lower  = -100;  //Lower level
 extern double CCI_Upper  = 100;  //Upper level
 extern int CCI_Shift     = 0;   //Shift
+
+sinput string EMA_Trend_Filter; //*****   EMA Trend Filter   *****
+extern bool Use_TrendFilter = true;   //TrendFilter is used
+input ENUM_TRENDFILTER_METHOD TrendFilter_Method=EMA_Slope; // Which Method to use for Trendfilter
+input string Header_EMA_Slope; //*****   EMA Slope Filter   *****
+input int ma_period=32; // MA Period
+input ENUM_MA_METHOD ma_method=MODE_EMA; // MA Method
+input ENUM_APPLIED_PRICE applied_price=PRICE_TYPICAL; // MA Applied Price
+input ENUM_TIMEFRAMES timeFrameDirection=PERIOD_M15; // MA TimeFrame
+input string Header_Close_And_EMA_200; //*****   EMA Static Filter   *****
+input int ema_period=200; // MA Period
+input ENUM_APPLIED_PRICE ema_price=PRICE_CLOSE; // MA Applied Price
+input ENUM_TIMEFRAMES ema_timeFrameDirection=PERIOD_H1; // MA TimeFrame
 
 sinput string ATR_for_Grid_Size; //*****   Average True Range   *****
 extern bool Use_ATR           = false;      //Using ATR for Grid Size
@@ -533,9 +548,9 @@ void robot()
          take_profit = TP_Multiplier * ATR_Grid_Size() / ATR_Multiplier; // maybe fixed take profit better?
         }
       // #019: new button: Stop Next Cyle, which trades normally, until cycle is closed
-      if(Use_BB || Use_Stoch || Use_RSI)
+      if(Use_BB || Use_Stoch || Use_RSI || Use_CCI)
         {
-         if(!stopNextCycle && !restAndRealize && Indicators_Buy())
+         if(!stopNextCycle && !restAndRealize && Indicators_Buy() && Get_TrendDirection() != OP_SELL)
            {
             ticket = OrderSendReliable(Symbol(), OP_BUY, CalculateStartingVolume(), MarketInfo(Symbol(), MODE_ASK), slippage, 0, 0, key + "-" + (string)buys, magic, 0, Blue);
             if(sells == 0 && both_cycle)
@@ -712,9 +727,9 @@ void robot()
          take_profit = TP_Multiplier * ATR_Grid_Size() / ATR_Multiplier;
         }
       // #019: new button: Stop Next Cyle, which trades normally, until cycle is closed
-      if(Use_BB || Use_Stoch || Use_RSI)
+      if(Use_BB || Use_Stoch || Use_RSI || Use_CCI)
         {
-         if(!stopNextCycle && !restAndRealize && Indicators_Sell())
+         if(!stopNextCycle && !restAndRealize && Indicators_Sell() && Get_TrendDirection() != OP_BUY)
            {
             ticket = OrderSendReliable(Symbol(), OP_SELL, CalculateStartingVolume(), MarketInfo(Symbol(), MODE_BID), slippage, 0, 0, key + "-" + (string)sells, magic, 0, Red);
             if(buys == 0 && both_cycle)
@@ -2271,9 +2286,6 @@ void showData()
       Write("panel_1_30", "BuyHedging_Orders: " + (string)hedge_buys, 5, 572, "Arial", 10, panelCol);
       Write("panel_1_31", "BuyHedging_Lots: " + DoubleToStr(total_hedge_buy_lots, 2), 5, 588, "Arial", 10, panelCol);
 
-
-
-
       Write("panel_1_32", "Current drawdown: " + DoubleToString((max_equity - AccountEquity()), 2) + " " + ter_currencySymbol + " (" + DoubleToString((max_equity - AccountEquity()) / max_equity * 100, 2) + " %)", 5, 620, "Arial", 10, panelCol);
       Write("panel_1_33", "Max. drawdown: " + DoubleToString(max_float, 2) + " " + ter_currencySymbol, 5, 636, "Arial", 10, panelCol);
 
@@ -2288,9 +2300,7 @@ void showData()
       Write("panel_1_42", cycleRisttext, 5, 796, "Arial", 10, panelCol);
       Write("panel_1_43", "Progression: " + info_money_management[progression] + (string)lot_multiplicator, 5, 812, "Arial", 10, panelCol);
       Write("panel_1_44", "Max Positions: " + (string)max_positions, 5, 828, "Arial", 10, panelCol);
-      Write("panel_1_45", "AveregeFrom: " + (string)grid_partially_close, 5, 844, "Arial", 10, panelCol);
-
-
+      Write("panel_1_45", "Average From: " + (string)grid_partially_close, 5, 844, "Arial", 10, panelCol);
 
      }
   }
@@ -4250,13 +4260,13 @@ void EqualLockLevel()
    if(dlots != 0)
      {
       if(dlots > 0)
-         dUrRL = (dlots * ter_MODE_MARGINREQUIRED - freemargin) / (ter_tick_value * dlots);              //расстояние до уровня Равного Лока
+         dUrRL = (dlots * ter_MODE_MARGINREQUIRED - freemargin) / (ter_tick_value * dlots);              //distance to Equal Lock level
       if(dlots < 0)
-         dUrRL = (dlots * ter_MODE_MARGINREQUIRED + freemargin) / (ter_tick_value * dlots);              //расстояние до уровня Равного Лока
+         dUrRL = (dlots * ter_MODE_MARGINREQUIRED + freemargin) / (ter_tick_value * dlots);              //distance to Equal Lock level
       if(dlots > 0)
-         UrRL = Bid + dUrRL * Point;    //уровень равного лока
+         UrRL = Bid + dUrRL * Point;    //equal lock level
       if(dlots < 0)
-         UrRL = Ask - dUrRL * Point;    //уровень равного лока
+         UrRL = Ask - dUrRL * Point;    //equal lock level
      }
 
 //---------------------------------------------------------------------------------------------//
@@ -4266,7 +4276,7 @@ void EqualLockLevel()
    if(dlots != 0 && _uUr_RL)
      {
       if(_uUr_RL == true)
-         driveline("_Уровень Равного Лока", UrRL, Color_RL, Style_RL, Width_RL);
+         driveline("_Equal Lock Level", UrRL, Color_RL, Style_RL, Width_RL);
      }
 
   }
@@ -4299,3 +4309,51 @@ bool NewBarTF(int period)
    return false;
   }
 //+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+int Get_TrendDirection()
+//+------------------------------------------------------------------+
+  {
+   int iDirection=0;
+
+   if(TrendFilter_Method==Close_And_EMA_200)
+     {
+      double dClose1=iClose(Symbol(),ema_timeFrameDirection,1);
+      double dEMA1=iMA(Symbol(),ema_timeFrameDirection,ema_period,0,MODE_EMA,ema_price,1);
+      if(dClose1>=dEMA1)
+         iDirection=OP_BUY;
+      else
+      if(dClose1<dEMA1)
+         iDirection=OP_SELL;
+     }
+   else
+   if(TrendFilter_Method==EMA_Slope)
+     {
+      int signalBar=1;
+
+      double avg10 = iMA(Symbol(),timeFrameDirection,ma_period,0,ma_method,applied_price,signalBar);
+      double avg11 = iMA(Symbol(),timeFrameDirection,ma_period,1,ma_method,applied_price,signalBar);
+      double diff10= 10000*(avg10-avg11)/avg10;
+
+      double avg20 = iMA(Symbol(),timeFrameDirection,ma_period,0,ma_method,applied_price,signalBar+1);
+      double avg21 = iMA(Symbol(),timeFrameDirection,ma_period,1,ma_method,applied_price,signalBar+1);
+      double diff20= 10000*(avg20-avg21)/avg20;
+
+      double avg30 = iMA(Symbol(),timeFrameDirection,ma_period,0,ma_method,applied_price,signalBar+2);
+      double avg31 = iMA(Symbol(),timeFrameDirection,ma_period,1,ma_method,applied_price,signalBar+2);
+      double diff30= 10000*(avg30-avg31)/avg30;
+
+      double avg40 = iMA(Symbol(),timeFrameDirection,ma_period,0,ma_method,applied_price,signalBar+3);
+      double avg41 = iMA(Symbol(),timeFrameDirection,ma_period,1,ma_method,applied_price,signalBar+3);
+      double diff40= 10000*(avg40-avg41)/avg40;
+
+      double trigger1= (diff10+diff20+diff30)/3.0;
+      double trigger2= (diff20+diff30+diff40)/3.0;
+
+      iDirection=-100;
+      
+      if( (diff10>0 && diff10>trigger1) || (diff20>0 && diff20>trigger2)) iDirection= OP_BUY; else
+      if( (diff10<0 && diff10<trigger1) || (diff20<0 && diff30<trigger2)) iDirection= OP_SELL;
+     }
+   return(iDirection);
+  }
